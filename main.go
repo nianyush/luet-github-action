@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -114,10 +115,13 @@ func main() {
 	utils.RunSH("dependencies", "curl -L https://raw.githubusercontent.com/mocaccinoOS/repository-index/master/packages/luet.yml --output /etc/luet/repos.conf.d/luet.yml")
 
 	if dockerUsername != "" && dockerPassword != "" {
-		out, err := utils.RunSHOUT("login", fmt.Sprintf(
-			"echo %s | docker login -u '%s' --password-stdin '%s'",
-			dockerPassword, dockerUsername, dockerEndpoint),
-		)
+		cmd := fmt.Sprintf("echo %s | docker login -u '%s' --password-stdin '%s'", dockerPassword, dockerUsername, dockerEndpoint)
+		if _, err := base64.StdEncoding.DecodeString(dockerPassword); err == nil {
+			cmd = fmt.Sprintf("echo '%s' | base64 -d | docker login -u %s --password-stdin %s", dockerPassword, dockerUsername, dockerEndpoint)
+			fmt.Println("Docker password is base64 encoded")
+		}
+
+		out, err := utils.RunSHOUT("login", cmd)
 		if err != nil {
 			fmt.Println(string(out))
 			os.Exit(1)
