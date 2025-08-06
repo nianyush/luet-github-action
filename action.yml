@@ -46,6 +46,10 @@ inputs:
   pushFinalImagesRepository:
     description: "Specify a different final repo"
     required: false
+  keepImages:
+    default: true
+    description: "Keep built docker images in the host"
+    required: false
   tree:
     default: ${PWD}/packages
     description: "create repository"
@@ -130,6 +134,7 @@ runs:
   - "-pushCache=${{ inputs.pushCache }}"
   - "-pushFinalImages=${{ inputs.pushFinalImages }}"
   - "-pushFinalImagesRepository=${{ inputs.pushFinalImagesRepository }}"
+  - "-keepImages=${{ inputs.keepImages }}"
   - "-tree=${{ inputs.tree }}"
   - "-platform=${{ inputs.platform }}"
   - "-luetVersion=${{ inputs.luetVersion }}"

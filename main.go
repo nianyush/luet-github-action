@@ -53,6 +53,8 @@ var push = flag.Bool("pushCache", false, "Pushing cache images while building")
 var pushFinalImages = flag.Bool("pushFinalImages", false, "Pushing final images while building")
 var pushFinalImagesRepository = flag.String("pushFinalImagesRepository", "", "Specify a different final repo")
 
+var keepImages = flag.Bool("keepImages", true, "Keep built docker images in the host")
+
 var tree = flag.String("tree", "${PWD}/packages", "create repository")
 var platform = flag.String("platform", "", "buildx platform")
 
@@ -311,6 +313,10 @@ func buildPackage(s string) {
 
 	if *pushFinalImagesRepository != "" {
 		args = append(args, "--push-final-images-repository", *pushFinalImagesRepository)
+	}
+
+	if *keepImages {
+		args = append(args, "--keep-images")
 	}
 
 	if finalRepo != "" {
