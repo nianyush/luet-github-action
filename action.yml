@@ -50,6 +50,10 @@ inputs:
     default: true
     description: "Keep built docker images in the host"
     required: false
+  pretend:
+    default: false
+    description: "Pretend to build"
+    required: false
   tree:
     default: ${PWD}/packages
     description: "create repository"
@@ -135,6 +139,7 @@ runs:
   - "-pushFinalImages=${{ inputs.pushFinalImages }}"
   - "-pushFinalImagesRepository=${{ inputs.pushFinalImagesRepository }}"
   - "-keepImages=${{ inputs.keepImages }}"
+  - "-pretend=${{ inputs.pretend }}"
   - "-tree=${{ inputs.tree }}"
   - "-platform=${{ inputs.platform }}"
   - "-luetVersion=${{ inputs.luetVersion }}"

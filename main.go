@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -18,6 +19,7 @@ import (
 	utils "github.com/mudler/luet/pkg/api/client/utils"
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/installer"
+	"github.com/sethvargo/go-githubactions"
 )
 
 type opData struct {
@@ -27,6 +29,20 @@ type opData struct {
 type resultData struct {
 	Package luetClient.Package
 	Exists  bool
+}
+
+type matrix map[string][]string
+
+func (m *matrix) Add(key, value string) {
+	if _, ok := (*m)[key]; !ok {
+		(*m)[key] = []string{}
+	}
+	(*m)[key] = append((*m)[key], value)
+}
+
+func (m *matrix) String() string {
+	s, _ := json.Marshal(m)
+	return string(s)
 }
 
 // The action can:
@@ -54,6 +70,8 @@ var pushFinalImages = flag.Bool("pushFinalImages", false, "Pushing final images 
 var pushFinalImagesRepository = flag.String("pushFinalImagesRepository", "", "Specify a different final repo")
 
 var keepImages = flag.Bool("keepImages", true, "Keep built docker images in the host")
+
+var pretend = flag.Bool("pretend", false, "Pretend to build")
 
 var tree = flag.String("tree", "${PWD}/packages", "create repository")
 var platform = flag.String("platform", "", "buildx platform")
@@ -232,6 +250,8 @@ func build() {
 	packs, err := luetClient.TreePackages(*tree)
 	checkErr(err)
 
+	packages := []client.Package{}
+
 	if *fromIndex {
 		currentPackages := repositoryPackages(finalRepo)
 		missingPackages := []client.Package{}
@@ -256,19 +276,26 @@ func build() {
 			fmt.Println("-", m.String())
 		}
 
-		for _, p := range missingPackages {
-			buildPackage(p.String())
-		}
-
-		return
-	}
-
-	for _, p := range packs.Packages {
-		if ((*onlyMissing && !p.ImageAvailable(finalRepo)) || !*onlyMissing) &&
-			(currentPackage != "" && p.EqualSV(currentPackage) || currentPackage == "") {
-			buildPackage(p.String())
+		packages = append(packages, missingPackages...)
+	} else {
+		for _, p := range packs.Packages {
+			if ((*onlyMissing && !p.ImageAvailable(finalRepo)) || !*onlyMissing) &&
+				(currentPackage != "" && p.EqualSV(currentPackage) || currentPackage == "") {
+				packages = append(packages, p)
+			}
 		}
 	}
+
+	packagesMatrix := matrix{}
+
+	for _, p := range packages {
+		packagesMatrix.Add("package", p.String())
+		if !*pretend {
+			buildPackage(p.String())
+		}
+	}
+
+	githubactions.SetOutput("packages", packagesMatrix.String())
 
 	utils.RunSH("build perms", "chmod -R 777 "+*outputdir)
 }
