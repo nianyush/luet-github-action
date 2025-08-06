@@ -46,6 +46,27 @@ func (m *matrix) String() string {
 	return string(s)
 }
 
+// github has a limit of 256 jobs per workflow run
+func ensurePackageMatrixLimit(m *matrix) {
+	// use 250 for safety. 256 is the actual limit.
+	if len((*m)["package"]) <= 250 {
+		return
+	}
+
+	packages := []string{}
+	// put first 250 packages in the matrix
+	for i := 0; i < 250; i++ {
+		packages = append(packages, (*m)["package"][i])
+	}
+
+	// put the rest in at idx mod 250 and merge with existing packages using space separator
+	for i := 250; i < len((*m)["package"]); i++ {
+		packages[i%250] = strings.Join([]string{packages[i%250], (*m)["package"][i]}, " ")
+	}
+
+	(*m)["package"] = packages
+}
+
 func matchPackages(currentPackage string, p client.Package) bool {
 	if currentPackage == "" {
 		return true
@@ -304,7 +325,8 @@ func build() {
 		}
 	}
 
-	githubactions.SetOutput("packages", packagesMatrix.String())
+	ensurePackageMatrixLimit(&packagesMatrix)
+	githubactions.SetOutput("matrix_jobs", packagesMatrix.String())
 
 	utils.RunSH("build perms", "chmod -R 777 "+*outputdir)
 }
