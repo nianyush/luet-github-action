@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -43,6 +44,15 @@ func (m *matrix) Add(key, value string) {
 func (m *matrix) String() string {
 	s, _ := json.Marshal(m)
 	return string(s)
+}
+
+func matchPackages(currentPackage string, p client.Package) bool {
+	if currentPackage == "" {
+		return true
+	}
+
+	cps := strings.Split(currentPackage, " ")
+	return slices.ContainsFunc(cps, p.EqualSV)
 }
 
 // The action can:
@@ -279,8 +289,7 @@ func build() {
 		packages = append(packages, missingPackages...)
 	} else {
 		for _, p := range packs.Packages {
-			if ((*onlyMissing && !p.ImageAvailable(finalRepo)) || !*onlyMissing) &&
-				(currentPackage != "" && p.EqualSV(currentPackage) || currentPackage == "") {
+			if ((*onlyMissing && !p.ImageAvailable(finalRepo)) || !*onlyMissing) && matchPackages(currentPackage, p) {
 				packages = append(packages, p)
 			}
 		}
